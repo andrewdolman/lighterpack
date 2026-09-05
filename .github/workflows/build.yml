@@ -1,7 +1,7 @@
 name: build
 on:
   push:
-    branches: [selfhost]
+    branches: [selfhosted]
   workflow_dispatch:
 
 jobs:
@@ -21,5 +21,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/andrewdolman/lighterpack:selfhost
-          
+          tags: ghcr.io/andrewdolman/lighterpack:selfhosted         
