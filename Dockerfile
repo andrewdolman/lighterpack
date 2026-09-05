@@ -19,15 +19,8 @@ RUN mkdir -p /app && chown node:node /app
 WORKDIR /app
 USER node
 
-COPY --chown=node:node package.json package-lock.json ./
-RUN npm ci --omit=dev
-
-COPY --chown=node:node --from=build /app/public/dist ./public/dist
-COPY --chown=node:node --from=build /app/app.js ./app.js
-COPY --chown=node:node --from=build /app/server ./server
-COPY --chown=node:node --from=build /app/config ./config
-COPY --chown=node:node --from=build /app/templates ./templates
-COPY --chown=node:node --from=build /app/public ./public
+COPY --chown=node:node --from=build /app ./
+RUN rm -rf node_modules && npm ci --omit=dev
 
 EXPOSE 3000
 CMD ["node", "app.js"]
