@@ -1,0 +1,6 @@
+node_modules
+public/dist
+.git
+config/local.json
+test-results
+playwright-report
