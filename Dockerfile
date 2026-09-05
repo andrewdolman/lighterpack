@@ -1,29 +1,33 @@
-# Self-hosting image for the LighterPack fork.
-# Upstream's docker/Dockerfile is left untouched — this is the one that gets built.
-
-FROM node:18-bullseye
-
-# The dependency tree is webpack 4-era and fails on modern OpenSSL with
-# ERR_OSSL_EVP_UNSUPPORTED. Node 18 still honours the legacy provider flag.
-ENV NODE_OPTIONS=--openssl-legacy-provider
-
-# Deliberately NOT setting NODE_ENV=production:
-#   1. npm ci would skip devDependencies, dropping webpack-cli and breaking `npm run build`
-#   2. app.js requires webpack-dev-server unconditionally at line 2, before any environment
-#      check, so a dev-pruned install crashes at startup with MODULE_NOT_FOUND
+# Build stage: needs devDependencies for vite.
+FROM node:22-bookworm AS build
 
 RUN mkdir -p /app && chown node:node /app
 WORKDIR /app
 USER node
 
-# Dependencies first so this layer caches across source-only changes.
 COPY --chown=node:node package.json package-lock.json ./
 RUN npm ci
 
 COPY --chown=node:node . .
-
-# Emits hashed bundles into public/dist, which is gitignored and built here instead.
 RUN npm run build
+
+# Runtime stage: production deps only. app.js imports vite dynamically and
+# only when environment !== production, so it is not needed here.
+FROM node:22-bookworm-slim
+
+RUN mkdir -p /app && chown node:node /app
+WORKDIR /app
+USER node
+
+COPY --chown=node:node package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY --chown=node:node --from=build /app/public/dist ./public/dist
+COPY --chown=node:node --from=build /app/app.js ./app.js
+COPY --chown=node:node --from=build /app/server ./server
+COPY --chown=node:node --from=build /app/config ./config
+COPY --chown=node:node --from=build /app/templates ./templates
+COPY --chown=node:node --from=build /app/public ./public
 
 EXPOSE 3000
 CMD ["node", "app.js"]
